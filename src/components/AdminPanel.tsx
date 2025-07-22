@@ -2,6 +2,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import EarningsAnalytics from "./EarningsAnalytics";
 import OrderManagement from "./OrderManagement";
+import CategoryCleaner from "./CategoryCleaner";
 
 const AdminPanel = () => {
   return (
@@ -13,9 +14,10 @@ const AdminPanel = () => {
         </div>
 
         <Tabs defaultValue="orders" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="orders">Orders</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            <TabsTrigger value="cleaner">Category Cleaner</TabsTrigger>
           </TabsList>
 
           <TabsContent value="orders">
@@ -24,6 +26,10 @@ const AdminPanel = () => {
 
           <TabsContent value="analytics">
             <EarningsAnalytics />
+          </TabsContent>
+
+          <TabsContent value="cleaner">
+            <CategoryCleaner />
           </TabsContent>
         </Tabs>
       </div>
