@@ -22,42 +22,6 @@ const CategoryNav = ({ onCategoryChange, activeCategory }: CategoryNavProps) => 
       icon: "👌", 
       bgColor: "bg-red-400",
       translationKey: "popular"
-    },
-    { 
-      name: "Sandwich", 
-      icon: "🥪", 
-      bgColor: "bg-orange-400",
-      translationKey: "sandwich"
-    },
-    { 
-      name: "Pizza", 
-      icon: "🍕", 
-      bgColor: "bg-red-400",
-      translationKey: "pizza"
-    },
-    { 
-      name: "Noodles", 
-      icon: "🍜", 
-      bgColor: "bg-green-400",
-      translationKey: "noodles"
-    },
-    { 
-      name: "Manchurian", 
-      icon: "🥟", 
-      bgColor: "bg-blue-400",
-      translationKey: "manchurian"
-    },
-    { 
-      name: "Milk Shake", 
-      icon: "🥤", 
-      bgColor: "bg-pink-400",
-      translationKey: "milkshake"
-    },
-    { 
-      name: "Coffee", 
-      icon: "☕", 
-      bgColor: "bg-amber-400",
-      translationKey: "coffee"
     }
   ];
 
