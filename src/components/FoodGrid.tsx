@@ -13,6 +13,12 @@ interface FoodItem {
   description: string | null;
   is_available: boolean;
   category_id: string | null;
+  prices?: { S: number, M: number, L: number };
+}
+
+interface Category {
+  id: string;
+  name: string;
 }
 
 interface FoodGridProps {
@@ -24,15 +30,13 @@ const FoodGrid = ({ selectedCategory }: FoodGridProps) => {
   const [selectedDish, setSelectedDish] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [foodItems, setFoodItems] = useState<FoodItem[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const { t } = useLanguage();
 
   useEffect(() => {
     fetchData();
     loadFavorites();
-    
-    // Subscribe to real-time updates for food items
     const channel = supabase
       .channel('food-items-changes')
       .on(
@@ -43,12 +47,10 @@ const FoodGrid = ({ selectedCategory }: FoodGridProps) => {
           table: 'food_items'
         },
         () => {
-          console.log('Food items updated, refetching...');
           fetchData();
         }
       )
       .subscribe();
-
     return () => {
       supabase.removeChannel(channel);
     };
@@ -61,40 +63,20 @@ const FoodGrid = ({ selectedCategory }: FoodGridProps) => {
     }
   };
 
-  const saveFavorites = (newFavorites: string[]) => {
-    localStorage.setItem('favorites', JSON.stringify(newFavorites));
-  };
-
   const fetchData = async () => {
+    setLoading(true);
     try {
-      console.log('Fetching food items and categories...');
-      
-      // Fetch categories
-      const { data: categoriesData, error: categoriesError } = await supabase
-        .from('categories')
-        .select('*');
-
-      if (categoriesError) {
-        console.error('Error fetching categories:', categoriesError);
-      } else {
-        setCategories(categoriesData || []);
-      }
-
-      // Fetch food items
+      const { data: categoriesData } = await supabase.from('categories').select('*');
+      setCategories(categoriesData || []);
       const { data: foodData, error: foodError } = await supabase
         .from('food_items')
         .select('*')
         .eq('is_available', true)
         .order('created_at', { ascending: false });
-
-      if (foodError) {
-        console.error('Error fetching food items:', foodError);
-        throw foodError;
-      }
-      
-      console.log('Fetched food items:', foodData);
+      if (foodError) throw foodError;
       setFoodItems(foodData || []);
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Error fetching data:', error);
     } finally {
       setLoading(false);
@@ -102,28 +84,9 @@ const FoodGrid = ({ selectedCategory }: FoodGridProps) => {
   };
 
   const getFilteredFoodItems = () => {
-    if (selectedCategory === "All") {
-      return foodItems;
-    }
-
-    if (selectedCategory === "Popular") {
-      // Show favorite items as popular
-      return foodItems.filter(item => favorites.includes(item.id));
-    }
-
-    // Find category by name
-    const category = categories.find(cat => 
-      cat.name.toLowerCase() === selectedCategory.toLowerCase()
-    );
-
-    if (!category) {
-      // If no category found, filter by name matching
-      return foodItems.filter(item => 
-        item.name.toLowerCase().includes(selectedCategory.toLowerCase()) ||
-        selectedCategory.toLowerCase().includes(item.name.toLowerCase().split(' ')[0])
-      );
-    }
-
+    if (selectedCategory === "All") return foodItems;
+    const category = categories.find(cat => cat.name === selectedCategory);
+    if (!category) return [];
     return foodItems.filter(item => item.category_id === category.id);
   };
 
@@ -131,9 +94,8 @@ const FoodGrid = ({ selectedCategory }: FoodGridProps) => {
     const newFavorites = favorites.includes(id) 
       ? favorites.filter(fav => fav !== id)
       : [...favorites, id];
-    
     setFavorites(newFavorites);
-    saveFavorites(newFavorites);
+    localStorage.setItem('favorites', JSON.stringify(newFavorites));
   };
 
   const openFoodModal = (dish: any) => {
@@ -177,14 +139,12 @@ const FoodGrid = ({ selectedCategory }: FoodGridProps) => {
             </span>
           </h2>
         </div>
-        
         <div className="grid grid-cols-2 gap-6">
           {filteredItems.map((dish) => (
             <div 
               key={dish.id} 
               className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all duration-300 relative border border-gray-200 dark:border-gray-600"
             >
-              {/* Heart Icon */}
               <button 
                 onClick={(e) => {
                   e.stopPropagation();
@@ -197,8 +157,6 @@ const FoodGrid = ({ selectedCategory }: FoodGridProps) => {
                   className={`${favorites.includes(dish.id) ? 'fill-red-500 text-red-500' : 'text-gray-400 hover:text-red-400'} transition-colors duration-200`}
                 />
               </button>
-
-              {/* Food Image */}
               <div className="w-24 h-24 mx-auto mb-4 relative overflow-hidden rounded-lg">
                 <img 
                   src={dish.image_url} 
@@ -209,32 +167,26 @@ const FoodGrid = ({ selectedCategory }: FoodGridProps) => {
                   }}
                 />
               </div>
-
-              {/* Food Name */}
               <h3 className="font-bold text-gray-900 dark:text-white text-lg mb-2 text-center leading-tight">
                 {dish.name}
               </h3>
-
-              {/* Description */}
               <p className="text-gray-500 dark:text-gray-400 text-sm text-center mb-4 leading-relaxed min-h-[2.5rem]">
                 {dish.description || "Delicious and freshly prepared"}
               </p>
-
-              {/* Price */}
               <p className="text-gray-900 dark:text-white font-bold text-xl text-center mb-4">
-                ₹{dish.price.toFixed(2)}
+                {dish.prices ? `₹${dish.prices.S} - ₹${dish.prices.L}` : `₹${dish.price != null ? dish.price.toFixed(2) : "N/A"}`}
               </p>
-
-              {/* Add Button */}
               <div className="flex justify-center">
                 <button 
                   onClick={() => openFoodModal({
                     id: dish.id,
                     nameKey: dish.name,
                     name: dish.name,
-                    price: `₹${dish.price.toFixed(2)}`,
+                    price: `₹${dish.price != null ? dish.price.toFixed(2) : "N/A"}`,
                     image: dish.image_url,
-                    description: dish.description
+                    description: dish.description,
+                    category: categories.find(cat => cat.id === dish.category_id)?.name,
+                    prices: dish.prices
                   })}
                   className="w-12 h-12 bg-green-500 hover:bg-green-600 rounded-full flex items-center justify-center shadow-lg hover:scale-105 transition-all duration-200"
                 >
@@ -244,20 +196,15 @@ const FoodGrid = ({ selectedCategory }: FoodGridProps) => {
             </div>
           ))}
         </div>
-        
         {filteredItems.length === 0 && (
           <div className="text-center py-8 text-gray-500 dark:text-gray-400">
             <p>No food items found for "{selectedCategory}"</p>
             <p className="text-sm mt-2">
-              {selectedCategory === "Popular" 
-                ? "Add items to favorites to see them here!" 
-                : "Try selecting a different category or add items from the admin panel."
-              }
+              Try selecting a different category or add items from the admin panel.
             </p>
           </div>
         )}
       </div>
-
       {selectedDish && (
         <FoodModal
           isOpen={isModalOpen}

@@ -9,10 +9,29 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import Index from "./pages/Index";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
+import { useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 const queryClient = new QueryClient();
 
-const App = () => (
+function App() {
+  useEffect(() => {
+    async function testSupabaseConnection() {
+      try {
+        const { data, error } = await supabase.from('orders').select('*').limit(1);
+      if (error) {
+          console.error('Supabase connection error:', error);
+      } else {
+          console.log('Supabase connection successful:', data);
+        }
+      } catch (err) {
+        console.error('Supabase connection exception:', err);
+      }
+    }
+    testSupabaseConnection();
+  }, []);
+
+  return (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
       <LanguageProvider>
@@ -32,5 +51,6 @@ const App = () => (
     </ThemeProvider>
   </QueryClientProvider>
 );
+}
 
 export default App;

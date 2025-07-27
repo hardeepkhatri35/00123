@@ -4,12 +4,12 @@ import RestaurantHeader from "@/components/RestaurantHeader";
 import CategoryNav from "@/components/CategoryNav";
 import FoodGrid from "@/components/FoodGrid";
 import ThemeToggle from "@/components/ThemeToggle";
+import DataSeeder from "@/components/DataSeeder";
 
 const Index = () => {
   const [selectedCategory, setSelectedCategory] = useState("All");
 
   const handleCategoryChange = (category: string) => {
-    console.log('Category changed to:', category);
     setSelectedCategory(category);
   };
 
@@ -21,6 +21,7 @@ const Index = () => {
           <ThemeToggle />
         </div>
         <RestaurantHeader />
+        <DataSeeder />
         <CategoryNav 
           onCategoryChange={handleCategoryChange}
           activeCategory={selectedCategory}

@@ -28,14 +28,20 @@ interface Order {
   }[];
 }
 
-const OrderManagement = () => {
-  const [orders, setOrders] = useState<Order[]>([]);
+interface OrderManagementProps {
+  orders?: Order[];
+}
+
+const OrderManagement = ({ orders: propOrders }: OrderManagementProps) => {
+  // Always default to an array
+  const [orders, setOrders] = useState<Order[]>(Array.isArray(propOrders) ? propOrders : []);
   const [loading, setLoading] = useState(true);
   const [alarmingOrders, setAlarmingOrders] = useState<Set<string>>(new Set());
   const previousOrdersRef = useRef<string[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
+    // Always fetch orders initially
     fetchOrders();
     
     // Set up real-time subscription
@@ -61,8 +67,18 @@ const OrderManagement = () => {
     };
   }, []);
 
+  // Update orders when propOrders change
+  useEffect(() => {
+    if (propOrders && propOrders.length >= 0) {
+      setOrders(propOrders);
+      setLoading(false);
+    }
+  }, [propOrders]);
+
   // Check for new pending orders and trigger alarm
   useEffect(() => {
+    if (!orders || orders.length === 0) return;
+    
     const currentPendingOrders = orders
       .filter(order => order.status === 'PENDING')
       .map(order => order.id);
@@ -234,6 +250,9 @@ const OrderManagement = () => {
     }
   };
 
+  // Defensive: always use an array for mapping
+  const safeOrders = Array.isArray(propOrders) ? propOrders : Array.isArray(orders) ? orders : [];
+
   if (loading) {
     return (
       <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
@@ -264,12 +283,12 @@ const OrderManagement = () => {
       </CardHeader>
       <CardContent className="p-6">
         <div className="space-y-4">
-          {orders.length === 0 ? (
+          {safeOrders.length === 0 ? (
             <div className="text-center py-8 text-gray-500 dark:text-gray-400">
               No orders found.
             </div>
           ) : (
-            orders.map((order) => (
+            safeOrders.map((order) => (
               <div
                 key={order.id}
                 className={`border rounded-lg p-4 hover:shadow-md transition-shadow bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 ${
