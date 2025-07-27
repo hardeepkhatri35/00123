@@ -252,6 +252,9 @@ const OrderManagement = ({ orders: propOrders }: OrderManagementProps) => {
 
   // Defensive: always use an array for mapping
   const safeOrders = Array.isArray(propOrders) ? propOrders : Array.isArray(orders) ? orders : [];
+  if (!Array.isArray(safeOrders)) {
+    return <div className="text-center py-8 text-gray-500 dark:text-gray-400">No orders found.</div>;
+  }
 
   if (loading) {
     return (
@@ -352,7 +355,7 @@ const OrderManagement = ({ orders: propOrders }: OrderManagementProps) => {
                 <div className="mb-4">
                   <h4 className="font-medium mb-2 text-gray-900 dark:text-white">Order Items:</h4>
                   <div className="space-y-1">
-                    {order.order_items.map((item, index) => (
+                    {(order.order_items ?? []).map((item, index) => (
                       <div key={index} className="flex justify-between text-sm bg-gray-50 dark:bg-gray-600 p-2 rounded">
                         <span className="text-gray-900 dark:text-white">{item.dish_name} x {item.quantity}</span>
                         <span className="text-gray-900 dark:text-white font-medium">₹{item.item_total.toFixed(2)}</span>
