@@ -66,59 +66,28 @@ const FoodModal = ({ isOpen, onClose, dish }: FoodModalProps) => {
     setTimeout(() => setFlyingImage(false), 1500);
   };
 
-  const handleUPIPayment = () => {
-    const amount = total.toFixed(2);
-    const upiUrl = `upi://pay?pa=ashishkhatri0230-1@okaxis&pn=Ashish+Khatri&am=${amount}&cu=INR`;
-    
-    // Check if device supports UPI
-    const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    
-    if (isMobile) {
-      // For mobile devices, try to open UPI app
-      try {
-        window.location.href = upiUrl;
-        
-        // Show success message with UPI ID as backup
-        setTimeout(() => {
-          toast({
-            title: t('upiOpened') || "UPI App Opening",
-            description: `${t('payAmount') || 'Pay'} ₹${amount} ${t('to') || 'to'} ashishkhatri0230-1@okaxis`,
-            duration: 8000,
-          });
-        }, 500);
-      } catch (error) {
-        // Fallback for mobile
-        handleUPIFallback("ashishkhatri0230-1@okaxis", amount);
-      }
-    } else {
-      // For desktop, show UPI ID and copy to clipboard
-      handleUPIFallback("ashishkhatri0230-1@okaxis", amount);
-    }
-  };
-
-  const handleUPIFallback = (upiId: string, amount: string) => {
-    // Copy UPI ID to clipboard
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(upiId).then(() => {
-        toast({
-          title: t('upiCopied') || "UPI ID Copied",
-          description: `${t('payAmount') || 'Pay'} ₹${amount} ${t('to') || 'to'} ${upiId}`,
-          duration: 8000,
-        });
-      }).catch(() => {
-        // Fallback if clipboard fails
-        toast({
-          title: t('upiPayment') || "UPI Payment",
-          description: `${t('payAmount') || 'Pay'} ₹${amount} ${t('to') || 'to'} ${upiId}`,
-          duration: 10000,
-        });
+  const handlePhonePePayment = async (amount: number) => {
+    try {
+      const res = await fetch('http://localhost:3000/create-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount })
       });
-    } else {
-      // Fallback if clipboard API not available
+      const data = await res.json();
+      if (data.redirectUrl) {
+        window.open(data.redirectUrl, '_blank');
+      } else {
+        toast({
+          title: t('paymentFailed') || 'Payment Failed',
+          description: data.error || 'Could not initiate PhonePe payment.',
+          variant: 'destructive',
+        });
+      }
+    } catch (err) {
       toast({
-        title: t('upiPayment') || "UPI Payment",
-        description: `${t('payAmount') || 'Pay'} ₹${amount} ${t('to') || 'to'} ${upiId}`,
-        duration: 10000,
+        title: t('paymentFailed') || 'Payment Failed',
+        description: 'Could not initiate PhonePe payment.',
+        variant: 'destructive',
       });
     }
   };
@@ -269,8 +238,8 @@ ${notes ? `📝 *${t('notes') || 'Special Notes'}:* ${notes}` : ''}
         }, 1000);
       }
 
-      // Open UPI payment after successful order creation
-      handleUPIPayment();
+      // Open PhonePe payment after successful order creation
+      await handlePhonePePayment(total);
 
       // Reset form
       setQuantity(1);
@@ -492,19 +461,8 @@ ${notes ? `📝 *${t('notes') || 'Special Notes'}:* ${notes}` : ''}
               disabled={isLoading}
             >
               <Smartphone size={16} />
-              {isLoading ? (t('placingOrder') || "Placing Order...") : `${t('payViaUPI') || 'Pay via UPI'} ₹${total.toFixed(2)}`}
+              {isLoading ? (t('placingOrder') || "Placing Order...") : `${t('payWithPhonePe') || 'Pay with PhonePe'} ₹${total.toFixed(2)}`}
             </Button>
-          </div>
-
-          {/* Updated UPI Number Display */}
-          <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
-            <div className="flex items-center gap-2 justify-center">
-              <Smartphone size={18} className="text-blue-600 dark:text-blue-400" />
-              <div className="text-center">
-                <p className="text-sm font-medium text-blue-800 dark:text-blue-300">{t('upiPayment') || 'UPI Payment'}</p>
-                <p className="text-xs text-blue-600 dark:text-blue-400 font-mono">ashishkhatri0230-1@okaxis</p>
-              </div>
-            </div>
           </div>
         </div>
       </div>

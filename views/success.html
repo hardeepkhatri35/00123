@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payment Status</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f7f7fa; margin: 0; padding: 0; }
+    .container { max-width: 400px; margin: 60px auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 12px #0001; padding: 32px; text-align: center; }
+    h2 { color: #4b2aad; }
+    .success { color: #388e3c; }
+    .fail { color: #d32f2f; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Payment Status</h2>
+    <div id="statusMsg">Processing...</div>
+  </div>
+  <script>
+    // Check URL params for status
+    const params = new URLSearchParams(window.location.search);
+    let status = params.get('code') || params.get('status') || '';
+    let msg = '';
+    if (status.toLowerCase() === 'success') {
+      msg = '<span class="success">Payment Completed Successfully!</span>';
+    } else if (status.toLowerCase() === 'failure' || status.toLowerCase() === 'failed') {
+      msg = '<span class="fail">Payment Failed.</span>';
+    } else {
+      msg = 'Payment status unknown.';
+    }
+    document.getElementById('statusMsg').innerHTML = msg;
+  </script>
+</body>
+</html> 
