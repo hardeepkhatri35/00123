@@ -7,7 +7,6 @@ create table if not exists public.orders (
   notes text,
   order_number integer,
   order_type text,
-  payment_status text,
   status text,
   table_number integer,
   total_amount numeric,

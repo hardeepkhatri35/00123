@@ -15,7 +15,58 @@ const AdminPanel = () => {
       .from('orders')
       .select('*')
       .order('created_at', { ascending: false });
-    if (!error) setOrders(data);
+    
+    if (error) {
+      console.error('Error fetching orders:', error);
+      return;
+    }
+
+    // Fetch order items for each order
+    const ordersWithItems = [];
+    
+    for (const order of (data || [])) {
+      const { data: itemsData, error: itemsError } = await supabase
+        .from('order_items')
+        .select('*')
+        .eq('order_id', order.id);
+
+      if (itemsError) {
+        console.error('Error fetching order items:', itemsError);
+        ordersWithItems.push({ 
+          ...order, 
+          order_items: []
+        });
+        continue;
+      }
+
+      // Process order items to include image URLs by matching dish names
+      const processedItems = [];
+      for (const item of (itemsData || [])) {
+        // Try to find matching food item by name (case-insensitive)
+        const { data: foodItem } = await supabase
+          .from('food_items')
+          .select('image_url')
+          .ilike('name', item.dish_name)
+          .single();
+
+        const result = {
+          ...item,
+          image_url: foodItem?.image_url || null
+        };
+        
+        processedItems.push(result);
+      }
+
+      const result = { 
+        ...order, 
+        order_items: processedItems
+      };
+      
+      ordersWithItems.push(result);
+    }
+
+    console.log('AdminPanel: Orders with items fetched:', ordersWithItems.length);
+    setOrders(ordersWithItems);
   }
 
   useEffect(() => {

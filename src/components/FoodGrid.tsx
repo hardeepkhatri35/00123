@@ -67,7 +67,7 @@ const FoodGrid = ({ selectedCategory }: FoodGridProps) => {
     setLoading(true);
     try {
       const { data: categoriesData } = await supabase.from('categories').select('*');
-      setCategories(categoriesData || []);
+        setCategories(categoriesData || []);
       const { data: foodData, error: foodError } = await supabase
         .from('food_items')
         .select('*')

@@ -154,4 +154,4 @@ const CategoryNav = ({ activeCategory, onCategoryChange }: CategoryNavProps) => 
   );
 };
 
-export default CategoryNav; 
+export default CategoryNav;

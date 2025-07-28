@@ -37,8 +37,6 @@ const translations = {
     specialNotes: 'Special Notes',
     total: 'Total',
     cancel: 'Cancel',
-    payViaUPI: 'Pay via UPI',
-    upiPayment: 'UPI Payment',
     // Success messages
     orderSuccessful: 'Order Successful!',
     orderPlaced: 'Order',
@@ -67,12 +65,7 @@ const translations = {
     totalAmount: 'TOTAL AMOUNT',
     notes: 'Special Notes',
     orderTime: 'Order Time',
-    thankYou: 'Thank you for your order!',
-    paymentInstructions: 'Payment via UPI',
-    // UPI messages
-    upiCopied: 'UPI ID Copied',
-    payAmount: 'Pay',
-    to: 'to'
+    thankYou: 'Thank you for your order!'
   },
   hindi: {
     restaurantName: 'डेमो रेस्टोरेंट',
@@ -99,8 +92,6 @@ const translations = {
     specialNotes: 'विशेष नोट्स',
     total: 'कुल',
     cancel: 'रद्द करें',
-    payViaUPI: 'UPI से भुगतान',
-    upiPayment: 'UPI भुगतान',
     // Success messages
     orderSuccessful: 'ऑर्डर सफल!',
     orderPlaced: 'ऑर्डर',
@@ -129,12 +120,7 @@ const translations = {
     totalAmount: 'कुल राशि',
     notes: 'विशेष नोट्स',
     orderTime: 'ऑर्डर समय',
-    thankYou: 'आपके ऑर्डर के लिए धन्यवाद!',
-    paymentInstructions: 'UPI के माध्यम से भुगतान',
-    // UPI messages
-    upiCopied: 'UPI ID कॉपी की गई',
-    payAmount: 'भुगतान',
-    to: 'को'
+    thankYou: 'आपके ऑर्डर के लिए धन्यवाद!'
   },
   punjabi: {
     restaurantName: 'ਡੈਮੋ ਰੈਸਟੋਰੈਂਟ',
@@ -161,8 +147,6 @@ const translations = {
     specialNotes: 'ਖਾਸ ਨੋਟਸ',
     total: 'ਕੁੱਲ',
     cancel: 'ਰੱਦ ਕਰੋ',
-    payViaUPI: 'UPI ਨਾਲ ਭੁਗਤਾਨ',
-    upiPayment: 'UPI ਭੁਗਤਾਨ',
     // Success messages
     orderSuccessful: 'ਆਰਡਰ ਸਫਲ!',
     orderPlaced: 'ਆਰਡਰ',
@@ -191,12 +175,7 @@ const translations = {
     totalAmount: 'ਕੁੱਲ ਰਾਸ਼ੀ',
     notes: 'ਖਾਸ ਨੋਟਸ',
     orderTime: 'ਆਰਡਰ ਟਾਈਮ',
-    thankYou: 'ਤੁਹਾਡੇ ਆਰਡਰ ਲਈ ਧੰਨਵਾਦ!',
-    paymentInstructions: 'UPI ਦੁਆਰਾ ਭੁਗਤਾਨ',
-    // UPI messages
-    upiCopied: 'UPI ID ਕਾਪੀ ਕੀਤੀ ਗਈ',
-    payAmount: 'ਭੁਗਤਾਨ',
-    to: 'ਨੂੰ'
+    thankYou: 'ਤੁਹਾਡੇ ਆਰਡਰ ਲਈ ਧੰਨਵਾਦ!'
   },
   telugu: {
     restaurantName: 'డెమో రెస్టారెంట్',
@@ -223,8 +202,6 @@ const translations = {
     specialNotes: 'ప్రత్యేక గమనికలు',
     total: 'మొత్తం',
     cancel: 'రద్దు చేయండి',
-    payViaUPI: 'UPI ద్వారా చెల్లించండి',
-    upiPayment: 'UPI చెల్లింపు',
     // Success messages
     orderSuccessful: 'ఆర్డర్ విజయవంతం!',
     orderPlaced: 'ఆర్డర్',
@@ -253,12 +230,7 @@ const translations = {
     totalAmount: 'మొత్తం మొత్తం',
     notes: 'ప్రత్యేక గమనికలు',
     orderTime: 'ఆర్డర్ సమయం',
-    thankYou: 'మీ ఆర్డర్ కోసం ధన్యవాదాలు!',
-    paymentInstructions: 'UPI ద్వారా చెల్లింపు',
-    // UPI messages
-    upiCopied: 'UPI ID కాపీ చేయబడింది',
-    payAmount: 'చెల్లించండి',
-    to: 'కు'
+    thankYou: 'మీ ఆర్డర్ కోసం ధన్యవాదాలు!'
   },
   marathi: {
     restaurantName: 'डेमो रेस्टॉरंट',
@@ -285,8 +257,6 @@ const translations = {
     specialNotes: 'विशेष नोट्स',
     total: 'एकूण',
     cancel: 'रद्द करा',
-    payViaUPI: 'UPI द्वारे पेमेंट',
-    upiPayment: 'UPI पेमेंट',
     // Success messages
     orderSuccessful: 'ऑर्डर यशस्वी!',
     orderPlaced: 'ऑर्डर',
@@ -315,12 +285,7 @@ const translations = {
     totalAmount: 'एकूण रक्कम',
     notes: 'विशेष नोट्स',
     orderTime: 'ऑर्डर वेळ',
-    thankYou: 'तुमच्या ऑर्डरसाठी धन्यवाद!',
-    paymentInstructions: 'UPI द्वारे पेमेंट',
-    // UPI messages
-    upiCopied: 'UPI ID कॉपी केली',
-    payAmount: 'पेमेंट',
-    to: 'ला'
+    thankYou: 'तुमच्या ऑर्डरसाठी धन्यवाद!'
   }
 };
 

@@ -4,8 +4,10 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, XCircle, VolumeX } from "lucide-react";
+import { CheckCircle, XCircle, VolumeX, User, Phone, MapPin, Calendar, FileText, Package, Eye } from "lucide-react";
 import { alarmSound } from "@/utils/alarmUtils";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface Order {
   id: string;
@@ -14,7 +16,7 @@ interface Order {
   customer_phone: string | null;
   order_type: 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY';
   status: 'PENDING' | 'CONFIRMED' | 'PREPARING' | 'READY' | 'DELIVERED' | 'CANCELLED';
-  payment_status?: string | null;
+
   table_number: number | null;
   delivery_address: string | null;
   notes: string | null;
@@ -25,6 +27,8 @@ interface Order {
     quantity: number;
     dish_price: number;
     item_total: number;
+    size?: string;
+    image_url?: string;
   }[];
 }
 
@@ -37,6 +41,8 @@ const OrderManagement = ({ orders: propOrders }: OrderManagementProps) => {
   const [orders, setOrders] = useState<Order[]>(Array.isArray(propOrders) ? propOrders : []);
   const [loading, setLoading] = useState(true);
   const [alarmingOrders, setAlarmingOrders] = useState<Set<string>>(new Set());
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [showOrderDetails, setShowOrderDetails] = useState(false);
   const previousOrdersRef = useRef<string[]>([]);
   const { toast } = useToast();
 
@@ -106,64 +112,55 @@ const OrderManagement = ({ orders: propOrders }: OrderManagementProps) => {
     previousOrdersRef.current = currentPendingOrders;
   }, [orders, toast]);
 
-  const fetchOrders = async () => {
-    try {
-      const { data: ordersData, error: ordersError } = await supabase
-        .from('orders')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (ordersError) throw ordersError;
-
-      // Fetch order items for each order
-      const ordersWithItems = await Promise.all(
-        (ordersData || []).map(async (order) => {
-          const { data: itemsData, error: itemsError } = await supabase
-            .from('order_items')
-            .select('*')
-            .eq('order_id', order.id);
-
-          if (itemsError) {
-            console.error('Error fetching order items:', itemsError);
-            return { 
-              ...order, 
-              order_items: [],
-              payment_status: order.payment_status || 'PENDING'
-            };
-          }
-
-          return { 
-            ...order, 
-            order_items: itemsData || [],
-            payment_status: order.payment_status || 'PENDING'
-          };
-        })
-      );
-
-      setOrders(ordersWithItems);
-    } catch (error) {
-      console.error('Error fetching orders:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch orders",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+  // Debug effect to log orders state changes
+  useEffect(() => {
+    console.log('Orders state updated:', orders);
+    if (orders && orders.length > 0) {
+      console.log('First order structure:', orders[0]);
+      console.log('First order keys:', Object.keys(orders[0]));
+      console.log('First order items:', orders[0].order_items);
+      console.log('First order items type:', typeof orders[0].order_items);
+      console.log('First order items length:', orders[0].order_items?.length);
     }
+  }, [orders]);
+
+  const fetchOrders = async () => {
+    // This function is now handled by AdminPanel component
+    console.log('fetchOrders called from OrderManagement - should be handled by AdminPanel');
   };
 
   const updateOrderStatus = async (orderId: string, newStatus: 'PENDING' | 'CONFIRMED' | 'PREPARING' | 'READY' | 'DELIVERED' | 'CANCELLED') => {
     try {
-      const { error } = await supabase
-        .from('orders')
-        .update({ 
-          status: newStatus,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', orderId);
+      if (newStatus === 'CANCELLED') {
+        // Delete cancelled orders completely
+        const { error: deleteError } = await supabase
+          .from('orders')
+          .delete()
+          .eq('id', orderId);
 
-      if (error) throw error;
+        if (deleteError) throw deleteError;
+
+        toast({
+          title: "Order Cancelled",
+          description: "Order has been cancelled and removed",
+        });
+      } else {
+        // Update order status for other statuses
+        const { error } = await supabase
+          .from('orders')
+          .update({ 
+            status: newStatus,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', orderId);
+
+        if (error) throw error;
+
+        toast({
+          title: "Success",
+          description: `Order ${newStatus.toLowerCase()} successfully`,
+        });
+      }
 
       // Stop alarm for this order when it's accepted or cancelled
       if (newStatus === 'CONFIRMED' || newStatus === 'CANCELLED') {
@@ -180,12 +177,7 @@ const OrderManagement = ({ orders: propOrders }: OrderManagementProps) => {
         });
       }
 
-      toast({
-        title: "Success",
-        description: `Order ${newStatus.toLowerCase()} successfully`,
-      });
-
-      fetchOrders();
+      // Data will be updated by AdminPanel real-time subscription
     } catch (error) {
       console.error('Error updating order status:', error);
       toast({
@@ -237,21 +229,17 @@ const OrderManagement = ({ orders: propOrders }: OrderManagementProps) => {
     }
   };
 
-  const getPaymentStatusColor = (status: string) => {
-    switch (status) {
-      case 'COMPLETED':
-        return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
-      case 'PENDING':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';
-      case 'FAILED':
-        return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
-      default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
-    }
-  };
+
 
   // Defensive: always use an array for mapping
   const safeOrders = Array.isArray(propOrders) ? propOrders : Array.isArray(orders) ? orders : [];
+  
+  // Debug: Log the actual data being used
+  console.log('safeOrders length:', safeOrders.length);
+  if (safeOrders.length > 0) {
+    console.log('safeOrders[0] structure:', safeOrders[0]);
+    console.log('safeOrders[0] order_items:', safeOrders[0].order_items);
+  }
   if (!Array.isArray(safeOrders)) {
     return <div className="text-center py-8 text-gray-500 dark:text-gray-400">No orders found.</div>;
   }
@@ -270,7 +258,15 @@ const OrderManagement = ({ orders: propOrders }: OrderManagementProps) => {
     <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
       <CardHeader className="border-b border-gray-200 dark:border-gray-700">
         <div className="flex justify-between items-center">
-          <CardTitle className="text-gray-900 dark:text-white">Order Management</CardTitle>
+          <CardTitle className="text-gray-900 dark:text-white flex items-center gap-2">
+            <Package size={20} />
+            Order Management
+            {safeOrders.length > 0 && (
+              <Badge variant="secondary" className="ml-2">
+                {safeOrders.length} {safeOrders.length === 1 ? 'Order' : 'Orders'}
+              </Badge>
+            )}
+          </CardTitle>
           {alarmSound.isCurrentlyPlaying() && (
             <Button
               onClick={stopAlarmManually}
@@ -284,113 +280,341 @@ const OrderManagement = ({ orders: propOrders }: OrderManagementProps) => {
           )}
         </div>
       </CardHeader>
-      <CardContent className="p-6">
-        <div className="space-y-4">
-          {safeOrders.length === 0 ? (
-            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-              No orders found.
+      <CardContent className="p-0">
+        {safeOrders.length === 0 ? (
+          <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+            <Package size={48} className="mx-auto mb-4 opacity-50" />
+            <p className="text-lg font-medium">No orders found</p>
+            <p className="text-sm">Orders will appear here when customers place them</p>
             </div>
           ) : (
-            safeOrders.map((order) => (
-              <div
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-gray-50 dark:bg-gray-700">
+                  <TableHead className="font-semibold text-gray-900 dark:text-white">Order #</TableHead>
+                  <TableHead className="font-semibold text-gray-900 dark:text-white">Customer</TableHead>
+                  <TableHead className="font-semibold text-gray-900 dark:text-white">Food Name</TableHead>
+                  <TableHead className="font-semibold text-gray-900 dark:text-white">Size</TableHead>
+                  <TableHead className="font-semibold text-gray-900 dark:text-white">Type</TableHead>
+                  <TableHead className="font-semibold text-gray-900 dark:text-white">Total</TableHead>
+                  <TableHead className="font-semibold text-gray-900 dark:text-white">Status</TableHead>
+                  <TableHead className="font-semibold text-gray-900 dark:text-white">Time</TableHead>
+                  <TableHead className="font-semibold text-gray-900 dark:text-white text-center">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {safeOrders.map((order) => (
+                  <TableRow 
                 key={order.id}
-                className={`border rounded-lg p-4 hover:shadow-md transition-shadow bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 ${
-                  alarmingOrders.has(order.id) ? 'border-red-500 bg-red-50 dark:bg-red-900/20 animate-pulse' : ''
-                }`}
-              >
-                <div className="flex justify-between items-start mb-3">
-                  <div>
-                    <h3 className="font-semibold text-lg text-gray-900 dark:text-white">
-                      Order #{order.order_number}
+                    className={`hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
+                      alarmingOrders.has(order.id) ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700' : ''
+                    }`}
+                  >
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-900 dark:text-white">#{order.order_number}</span>
                       {alarmingOrders.has(order.id) && (
-                        <span className="ml-2 text-red-600 dark:text-red-400 font-bold animate-bounce">🔔 NEW!</span>
-                      )}
-                    </h3>
-                    <p className="text-gray-600 dark:text-gray-300 font-medium">{order.customer_name}</p>
-                    {order.customer_phone && (
-                      <p className="text-gray-600 dark:text-gray-300">{order.customer_phone}</p>
-                    )}
-                  </div>
-                  <div className="flex gap-2 flex-col items-end">
-                    <Badge className={getStatusColor(order.status)}>
-                      {order.status}
-                    </Badge>
-                    <Badge className={getOrderTypeColor(order.order_type)}>
-                      {order.order_type.replace('_', ' ')}
-                    </Badge>
-                    <Badge className={getPaymentStatusColor(order.payment_status || 'PENDING')}>
-                      {order.payment_status || 'PENDING'}
-                    </Badge>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">
-                      <strong>Total:</strong> ₹{order.total_amount.toFixed(2)}
-                    </p>
-                    {order.table_number && (
-                      <p className="text-sm text-gray-600 dark:text-gray-300">
-                        <strong>Table:</strong> {order.table_number}
-                      </p>
-                    )}
-                    {order.delivery_address && (
-                      <p className="text-sm text-gray-600 dark:text-gray-300">
-                        <strong>Address:</strong> {order.delivery_address}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">
-                      <strong>Order Time:</strong> {new Date(order.created_at).toLocaleString()}
-                    </p>
-                    {order.notes && (
-                      <p className="text-sm text-gray-600 dark:text-gray-300">
-                        <strong>Notes:</strong> {order.notes}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="mb-4">
-                  <h4 className="font-medium mb-2 text-gray-900 dark:text-white">Order Items:</h4>
-                  <div className="space-y-1">
-                    {(order.order_items ?? []).map((item, index) => (
-                      <div key={index} className="flex justify-between text-sm bg-gray-50 dark:bg-gray-600 p-2 rounded">
-                        <span className="text-gray-900 dark:text-white">{item.dish_name} x {item.quantity}</span>
-                        <span className="text-gray-900 dark:text-white font-medium">₹{item.item_total.toFixed(2)}</span>
+                          <span className="text-red-600 dark:text-red-400 font-bold animate-bounce">🔔</span>
+                        )}
                       </div>
-                    ))}
+                    </TableCell>
+                    <TableCell>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1 text-gray-900 dark:text-white font-medium">
+                          <User size={14} />
+                          {order.customer_name}
+                        </div>
+                    {order.customer_phone && (
+                          <div className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-300">
+                            <Phone size={12} />
+                            {order.customer_phone}
+                          </div>
+                        )}
+                        {order.table_number && (
+                          <div className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-300">
+                            <MapPin size={12} />
+                            Table {order.table_number}
+                          </div>
+                        )}
+                        {order.delivery_address && (
+                          <div className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-300 max-w-xs truncate">
+                            <MapPin size={12} />
+                            {order.delivery_address}
+                          </div>
+                    )}
+                  </div>
+                                        </TableCell>
+                    <TableCell>
+                      <div className="space-y-1">
+                        {(() => {
+                          const items = order.order_items && Array.isArray(order.order_items) ? order.order_items : [];
+                          console.log(`Order ${order.order_number} items:`, items);
+                          return items.map((item, index) => (
+                            <div key={index} className="flex items-center gap-2">
+                              <div className="w-6 h-6 rounded-full border overflow-hidden bg-gray-100 dark:bg-gray-600 flex items-center justify-center">
+                                {item.image_url ? (
+                                  <img 
+                                    src={item.image_url} 
+                                    alt={item.dish_name}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                      const target = e.currentTarget as HTMLImageElement;
+                                      target.style.display = 'none';
+                                      const fallback = target.nextElementSibling as HTMLElement;
+                                      if (fallback) fallback.classList.remove('hidden');
+                                    }}
+                                  />
+                                ) : null}
+                                <div className={`w-full h-full flex items-center justify-center text-xs text-gray-500 dark:text-gray-400 ${item.image_url ? 'hidden' : 'flex'}`}>
+                                  🍽️
+                                </div>
+                              </div>
+                              <span className="text-sm font-medium text-gray-900 dark:text-white">
+                                {item.dish_name}
+                              </span>
+                            </div>
+                          ));
+                        })()}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="space-y-1">
+                        {(() => {
+                          const items = order.order_items && Array.isArray(order.order_items) ? order.order_items : [];
+                          return items.map((item, index) => (
+                            <div key={index} className="flex items-center justify-center">
+                              <Badge variant="outline" className="text-xs">
+                                {item.size || 'M'}
+                              </Badge>
+                            </div>
+                          ));
+                        })()}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="space-y-1">
+                        <Badge className={getOrderTypeColor(order.order_type)}>
+                          {order.order_type.replace('_', ' ')}
+                        </Badge>
+                        {order.notes && (
+                          <div className="mt-1 p-1 bg-yellow-50 dark:bg-yellow-900/20 rounded text-xs">
+                            <div className="flex items-center gap-1 text-yellow-800 dark:text-yellow-200">
+                              <FileText size={8} />
+                              <span className="font-medium">Note:</span>
+                            </div>
+                            <p className="text-yellow-700 dark:text-yellow-300 mt-1 truncate">
+                              {order.notes}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-semibold text-gray-900 dark:text-white">
+                      ₹{order.total_amount.toFixed(2)}
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={getStatusColor(order.status)}>
+                        {order.status}
+                    </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-300">
+                        <Calendar size={12} />
+                        {new Date(order.created_at).toLocaleString()}
+                  </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2 justify-center">
+                        <Dialog open={showOrderDetails && selectedOrder?.id === order.id} onOpenChange={setShowOrderDetails}>
+                          <DialogTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setSelectedOrder(order);
+                                setShowOrderDetails(true);
+                              }}
+                            >
+                              <Eye size={14} />
+                            </Button>
+                          </DialogTrigger>
+                                                     <DialogContent className="max-w-2xl">
+                             <DialogHeader>
+                               <DialogTitle className="flex items-center gap-2">
+                                 <Package size={20} />
+                                 Order #{selectedOrder?.order_number} Details
+                               </DialogTitle>
+                             </DialogHeader>
+                                                         <div className="space-y-6">
+                               {/* Customer Information */}
+                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                 <div className="space-y-2">
+                                   <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                     <User size={16} />
+                                     Customer Information
+                                   </h3>
+                                   <div className="space-y-1 text-sm">
+                                     <p><strong>Name:</strong> {selectedOrder?.customer_name}</p>
+                                     {selectedOrder?.customer_phone && (
+                                       <p><strong>Phone:</strong> {selectedOrder.customer_phone}</p>
+                                     )}
+                                     {selectedOrder?.table_number && (
+                                       <p><strong>Table:</strong> {selectedOrder.table_number}</p>
+                                     )}
+                                     {selectedOrder?.delivery_address && (
+                                       <p><strong>Address:</strong> {selectedOrder.delivery_address}</p>
+                    )}
+                  </div>
+                                 </div>
+                                 <div className="space-y-2">
+                                   <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                     <Calendar size={16} />
+                                     Order Information
+                                   </h3>
+                                   <div className="space-y-1 text-sm">
+                                     <p><strong>Type:</strong> 
+                                       <Badge className={`ml-2 ${getOrderTypeColor(selectedOrder?.order_type || 'DINE_IN')}`}>
+                                         {selectedOrder?.order_type.replace('_', ' ') || 'DINE IN'}
+                                       </Badge>
+                                     </p>
+                                     <p><strong>Status:</strong> 
+                                       <Badge className={`ml-2 ${getStatusColor(selectedOrder?.status || 'PENDING')}`}>
+                                         {selectedOrder?.status || 'PENDING'}
+                                       </Badge>
+                                     </p>
+                                     <p><strong>Total:</strong> ₹{selectedOrder?.total_amount.toFixed(2) || '0.00'}</p>
+                                     <p><strong>Time:</strong> {selectedOrder?.created_at ? new Date(selectedOrder.created_at).toLocaleString() : 'N/A'}</p>
+                                   </div>
                   </div>
                 </div>
 
-                <div className="flex gap-2 flex-wrap">
+                              {/* Order Items */}
+                              <div className="space-y-2">
+                                <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                  <FileText size={16} />
+                                  Order Items
+                                </h3>
+                                <div className="border rounded-lg overflow-hidden">
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow>
+                                        <TableHead>Item</TableHead>
+                                        <TableHead>Size</TableHead>
+                                        <TableHead>Quantity</TableHead>
+                                        <TableHead>Price</TableHead>
+                                        <TableHead>Total</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {(selectedOrder?.order_items ?? []).map((item, index) => (
+                                        <TableRow key={index}>
+                                          <TableCell>
+                                            <div className="flex items-center gap-3">
+                                              <div className="w-10 h-10 rounded-full border overflow-hidden bg-gray-100 dark:bg-gray-600 flex items-center justify-center">
+                                                {item.image_url ? (
+                                                  <img 
+                                                    src={item.image_url} 
+                                                    alt={item.dish_name}
+                                                    className="w-full h-full object-cover"
+                                                    onError={(e) => {
+                                                      const target = e.currentTarget as HTMLImageElement;
+                                                      target.style.display = 'none';
+                                                      const fallback = target.nextElementSibling as HTMLElement;
+                                                      if (fallback) fallback.classList.remove('hidden');
+                                                    }}
+                                                  />
+                                                ) : null}
+                                                <div className={`w-full h-full flex items-center justify-center text-sm text-gray-500 dark:text-gray-400 ${item.image_url ? 'hidden' : 'flex'}`}>
+                                                  🍽️
+                                                </div>
+                                              </div>
+                                              <span className="font-medium">{item.dish_name}</span>
+                                            </div>
+                                          </TableCell>
+                                          <TableCell>
+                                            <Badge variant="outline" className="text-xs">
+                                              {item.size || 'M'}
+                                            </Badge>
+                                          </TableCell>
+                                          <TableCell>{item.quantity}</TableCell>
+                                          <TableCell>₹{item.dish_price.toFixed(2)}</TableCell>
+                                          <TableCell className="font-semibold">₹{item.item_total.toFixed(2)}</TableCell>
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                </div>
+
+                                                             {/* Notes */}
+                               {selectedOrder?.notes && (
+                                 <div className="space-y-2">
+                                   <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                     <FileText size={16} />
+                                     Special Notes
+                                   </h3>
+                                   <p className="text-sm text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
+                                     {selectedOrder.notes}
+                                   </p>
+                                 </div>
+                               )}
+
+                               {/* Action Buttons */}
+                               {selectedOrder?.status === 'PENDING' && (
+                                 <div className="flex gap-2 pt-4 border-t">
+                                   <Button
+                                     onClick={() => {
+                                       updateOrderStatus(selectedOrder.id, 'CONFIRMED');
+                                       setShowOrderDetails(false);
+                                     }}
+                                     className="bg-green-500 hover:bg-green-600 text-white"
+                                   >
+                                     <CheckCircle size={16} className="mr-2" />
+                                     Accept Order
+                                   </Button>
+                                   <Button
+                                     variant="destructive"
+                                     onClick={() => {
+                                       updateOrderStatus(selectedOrder.id, 'CANCELLED');
+                                       setShowOrderDetails(false);
+                                     }}
+                                   >
+                                     <XCircle size={16} className="mr-2" />
+                                     Reject Order
+                                   </Button>
+                                 </div>
+                               )}
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+
                   {order.status === 'PENDING' && (
-                    <>
+                          <div className="flex gap-1">
                       <Button
                         size="sm"
                         onClick={() => updateOrderStatus(order.id, 'CONFIRMED')}
                         className="bg-green-500 hover:bg-green-600 text-white"
                       >
-                        <CheckCircle size={16} className="mr-1" />
-                        Accept
+                              <CheckCircle size={14} />
                       </Button>
                       <Button
                         size="sm"
                         variant="destructive"
                         onClick={() => updateOrderStatus(order.id, 'CANCELLED')}
-                        className="bg-red-500 hover:bg-red-600"
                       >
-                        <XCircle size={16} className="mr-1" />
-                        Reject
+                              <XCircle size={14} />
                       </Button>
-                    </>
+                          </div>
                   )}
                 </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
               </div>
-            ))
           )}
-        </div>
       </CardContent>
     </Card>
   );
