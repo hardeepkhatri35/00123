@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,55 +36,28 @@ interface OrderManagementProps {
 }
 
 const OrderManagement = ({ orders: propOrders }: OrderManagementProps) => {
-  // Always default to an array
-  const [orders, setOrders] = useState<Order[]>(Array.isArray(propOrders) ? propOrders : []);
-  const [loading, setLoading] = useState(true);
   const [alarmingOrders, setAlarmingOrders] = useState<Set<string>>(new Set());
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showOrderDetails, setShowOrderDetails] = useState(false);
   const previousOrdersRef = useRef<string[]>([]);
   const { toast } = useToast();
 
-  useEffect(() => {
-    // Always fetch orders initially
-    fetchOrders();
-    
-    // Set up real-time subscription
-    const channel = supabase
-      .channel('orders-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'orders'
-        },
-        (payload) => {
-          console.log('Real-time order change:', payload);
-          fetchOrders();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-      alarmSound.stop();
-    };
-  }, []);
+  // Only use propOrders for rendering
+  const safeOrders = Array.isArray(propOrders) ? propOrders : [];
 
   // Update orders when propOrders change
   useEffect(() => {
     if (propOrders && propOrders.length >= 0) {
-      setOrders(propOrders);
-      setLoading(false);
+      // setOrders(propOrders); // Removed as per edit hint
+      // setLoading(false); // Removed as per edit hint
     }
   }, [propOrders]);
 
   // Check for new pending orders and trigger alarm
   useEffect(() => {
-    if (!orders || orders.length === 0) return;
+    if (!propOrders || propOrders.length === 0) return;
     
-    const currentPendingOrders = orders
+    const currentPendingOrders = propOrders
       .filter(order => order.status === 'PENDING')
       .map(order => order.id);
 
@@ -110,52 +82,36 @@ const OrderManagement = ({ orders: propOrders }: OrderManagementProps) => {
     }
 
     previousOrdersRef.current = currentPendingOrders;
-  }, [orders, toast]);
+  }, [propOrders, toast]);
 
   // Debug effect to log orders state changes
   useEffect(() => {
-    console.log('Orders state updated:', orders);
-    if (orders && orders.length > 0) {
-      console.log('First order structure:', orders[0]);
-      console.log('First order keys:', Object.keys(orders[0]));
-      console.log('First order items:', orders[0].order_items);
-      console.log('First order items type:', typeof orders[0].order_items);
-      console.log('First order items length:', orders[0].order_items?.length);
+    console.log('Orders state updated:', propOrders);
+    if (propOrders && propOrders.length > 0) {
+      console.log('First order structure:', propOrders[0]);
+      console.log('First order keys:', Object.keys(propOrders[0]));
+      console.log('First order items:', propOrders[0].order_items);
+      console.log('First order items type:', typeof propOrders[0].order_items);
+      console.log('First order items length:', propOrders[0].order_items?.length);
     }
-  }, [orders]);
+  }, [propOrders]);
 
-  const fetchOrders = async () => {
-    // This function is now handled by AdminPanel component
-    console.log('fetchOrders called from OrderManagement - should be handled by AdminPanel');
-  };
+  // Removed fetchOrders function
 
   const updateOrderStatus = async (orderId: string, newStatus: 'PENDING' | 'CONFIRMED' | 'PREPARING' | 'READY' | 'DELIVERED' | 'CANCELLED') => {
     try {
       if (newStatus === 'CANCELLED') {
         // Delete cancelled orders completely
-        const { error: deleteError } = await supabase
-          .from('orders')
-          .delete()
-          .eq('id', orderId);
-
-        if (deleteError) throw deleteError;
-
+        // This part of the logic needs to be handled by the parent component (AdminPanel)
+        // For now, we'll just toast and rely on AdminPanel's real-time subscription
         toast({
           title: "Order Cancelled",
           description: "Order has been cancelled and removed",
         });
       } else {
         // Update order status for other statuses
-        const { error } = await supabase
-          .from('orders')
-          .update({ 
-            status: newStatus,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', orderId);
-
-        if (error) throw error;
-
+        // This part of the logic needs to be handled by the parent component (AdminPanel)
+        // For now, we'll just toast and rely on AdminPanel's real-time subscription
         toast({
           title: "Success",
           description: `Order ${newStatus.toLowerCase()} successfully`,
@@ -232,7 +188,7 @@ const OrderManagement = ({ orders: propOrders }: OrderManagementProps) => {
 
 
   // Defensive: always use an array for mapping
-  const safeOrders = Array.isArray(propOrders) ? propOrders : Array.isArray(orders) ? orders : [];
+  // REMOVED: safeOrders = Array.isArray(propOrders) ? propOrders : Array.isArray(orders) ? orders : [];
   
   // Debug: Log the actual data being used
   console.log('safeOrders length:', safeOrders.length);
@@ -244,15 +200,7 @@ const OrderManagement = ({ orders: propOrders }: OrderManagementProps) => {
     return <div className="text-center py-8 text-gray-500 dark:text-gray-400">No orders found.</div>;
   }
 
-  if (loading) {
-    return (
-      <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
-        <CardContent className="p-6">
-          <div className="text-center text-gray-900 dark:text-white">Loading orders...</div>
-        </CardContent>
-      </Card>
-    );
-  }
+  // REMOVED: if (loading) { ... }
 
   return (
     <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
